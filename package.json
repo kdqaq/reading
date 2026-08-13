@@ -1,0 +1,11 @@
+{
+  "name": "reading-website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "scan": "node tools/scan-books.mjs",
+    "serve": "node tools/serve.mjs"
+  }
+}
