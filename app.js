@@ -86,15 +86,17 @@ function backToShelf() {
 }
 
 function measureAndPaginate() {
-  // 用隐藏容器测量每行在正文宽度下的实际显示高度
+  // 用隐藏容器测量每行在正文内容区宽度下的实际显示高度
   const measurer = document.createElement('div');
   const cs = getComputedStyle(pageContentEl);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   measurer.style.font = cs.font;
   measurer.style.lineHeight = cs.lineHeight;
   measurer.style.letterSpacing = cs.letterSpacing;
   measurer.style.whiteSpace = 'pre-wrap';
   measurer.style.wordBreak = 'break-word';
-  measurer.style.width = pageContentEl.clientWidth + 'px';
+  measurer.style.width = (pageContentEl.clientWidth - padX) + 'px';
   measurer.style.visibility = 'hidden';
   measurer.style.position = 'absolute';
   measurer.style.left = '-9999px';
@@ -106,9 +108,10 @@ function measureAndPaginate() {
   });
   measurer.remove();
 
-  const pageHeight = pageContentEl.clientHeight;
+  const pageHeight = pageContentEl.clientHeight - padY;
   pages = paginate(lines, (_line, i) => lineHeights[i], pageHeight);
   if (pages.length === 0) pages = [[]];
+  currentPage = Math.min(currentPage, pages.length - 1);
 }
 
 function renderPage() {

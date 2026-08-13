@@ -7,6 +7,7 @@ if errorlevel 1 goto :err
 echo [2/3] 提交到本地仓库...
 git add -A
 git commit -m "更新书籍"
+if errorlevel 1 goto :err
 echo [3/3] 推送到 GitHub...
 git push
 if errorlevel 1 goto :err
