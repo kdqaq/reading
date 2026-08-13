@@ -10,6 +10,7 @@ export async function scanBooks(booksDir, outputFile) {
   const entries = await readdir(booksDir, { withFileTypes: true });
   const books = entries
     .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.txt'))
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
     .map((e) => ({
       title: e.name.replace(/\.txt$/i, ''),
       file: path.posix.join('books', e.name),
