@@ -18,7 +18,7 @@ function safeName(s) {
 // 返回：目录对象 { title, volumes: [{ title, chapters: [{ title, file }] }] }
 export async function splitBook(srcFile, booksDir, bookTitle) {
   const buf = await readFile(srcFile);
-  const text = decodeText(buf);
+  const text = decodeText(buf).replace(/\r\n?/g, '\n');
   const lines = text.split('\n');
 
   const outDir = path.join(booksDir, bookTitle);
