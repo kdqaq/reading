@@ -28,6 +28,7 @@ let lineHeights = [];     // 每行实测高度
 let pages = [];           // 页分组（每页是行下标的数组）
 let currentPage = 0;
 let fontSize = 20;
+let lastWheelPageAt = 0;
 
 // —— 视图切换 ——
 function showView(view) {
@@ -213,6 +214,20 @@ btnPrev.addEventListener('click', prevPage);
 btnFontPlus.addEventListener('click', () => changeFont(2));
 btnFontMinus.addEventListener('click', () => changeFont(-2));
 btnTheme.addEventListener('click', toggleTheme);
+readerEl.addEventListener('wheel', (e) => {
+  if (e.deltaY === 0) return;
+
+  // 阅读器以分页呈现，避免浏览器同时滚动整个页面。
+  e.preventDefault();
+
+  // 一次滚轮操作可能触发多个 wheel 事件；短暂节流避免连续翻页。
+  const now = Date.now();
+  if (now - lastWheelPageAt < 300) return;
+  lastWheelPageAt = now;
+
+  if (e.deltaY > 0) nextPage();
+  else prevPage();
+}, { passive: false });
 document.addEventListener('keydown', (e) => {
   if (readerEl.classList.contains('hidden')) return;
   if (e.key === 'ArrowRight') nextPage();
