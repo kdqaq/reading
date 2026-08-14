@@ -4,12 +4,16 @@ import { paginate } from './lib/paginate.js';
 const $ = (sel) => document.querySelector(sel);
 
 const bookshelfEl = $('#bookshelf');
+const tocViewEl = $('#toc-view');
 const readerEl = $('#reader');
 const bookListEl = $('#book-list');
+const tocListEl = $('#toc-list');
+const tocTitleEl = $('#toc-title');
 const bookTitleEl = $('#book-title');
 const pageIndicatorEl = $('#page-indicator');
 const pageContentEl = $('#page-content');
 const btnBack = $('#btn-back');
+const btnTocBack = $('#btn-toc-back');
 const btnPrev = $('#btn-prev');
 const btnNext = $('#btn-next');
 const btnFontMinus = $('#btn-font-minus');
@@ -17,11 +21,21 @@ const btnFontPlus = $('#btn-font-plus');
 const btnTheme = $('#btn-theme');
 
 let books = [];
-let lines = [];        // 当前书按行切分
-let lineHeights = [];  // 每行实测高度
-let pages = [];        // 页分组（每页是行下标的数组）
+let currentBook = null;   // 当前打开的书 { title, file | toc }
+let currentToc = null;    // 目录书的目录对象
+let lines = [];           // 当前章按行切分
+let lineHeights = [];     // 每行实测高度
+let pages = [];           // 页分组（每页是行下标的数组）
 let currentPage = 0;
 let fontSize = 20;
+
+// —— 视图切换 ——
+function showView(view) {
+  bookshelfEl.classList.add('hidden');
+  tocViewEl.classList.add('hidden');
+  readerEl.classList.add('hidden');
+  view.classList.remove('hidden');
+}
 
 // —— 书架 ——
 async function loadBooks() {
@@ -57,32 +71,75 @@ function renderShelf() {
   }
 }
 
-// —— 阅读 ——
+// —— 打开书：目录书先显示目录，单文件书直接阅读 ——
 async function openBook(book) {
+  currentBook = book;
+  if (book.toc) {
+    await openToc(book);
+  } else {
+    await openChapter({ title: book.title, file: book.file });
+  }
+}
+
+async function openToc(book) {
   try {
-    const res = await fetch(book.file);
+    const res = await fetch(book.toc);
+    if (!res.ok) throw new Error(res.status);
+    currentToc = await res.json();
+    renderToc();
+    showView(tocViewEl);
+  } catch {
+    alert('目录加载失败：' + book.title);
+  }
+}
+
+function renderToc() {
+  tocTitleEl.textContent = currentToc.title || currentBook.title;
+  tocListEl.innerHTML = '';
+  for (const vol of currentToc.volumes) {
+    const volEl = document.createElement('div');
+    volEl.className = 'toc-volume';
+    const volTitle = document.createElement('div');
+    volTitle.className = 'toc-volume-title';
+    volTitle.textContent = vol.title;
+    volEl.append(volTitle);
+    for (const ch of vol.chapters) {
+      const chEl = document.createElement('div');
+      chEl.className = 'toc-chapter';
+      chEl.textContent = ch.title;
+      chEl.addEventListener('click', () => openChapter(ch));
+      volEl.append(chEl);
+    }
+    tocListEl.append(volEl);
+  }
+}
+
+// —— 阅读 ——
+async function openChapter(ch) {
+  try {
+    const res = await fetch(ch.file);
     if (!res.ok) throw new Error(res.status);
     const buf = await res.arrayBuffer();
     const text = decodeText(buf);
     lines = text.split('\n');
     currentPage = 0;
-    bookTitleEl.textContent = book.title;
-    showReader();
+    bookTitleEl.textContent = ch.title;
+    showView(readerEl);
     measureAndPaginate();
     renderPage();
   } catch {
-    alert('书籍加载失败：' + book.title);
+    alert('章节加载失败：' + ch.title);
   }
 }
 
-function showReader() {
-  bookshelfEl.classList.add('hidden');
-  readerEl.classList.remove('hidden');
+function backToShelf() {
+  showView(bookshelfEl);
 }
 
-function backToShelf() {
-  readerEl.classList.add('hidden');
-  bookshelfEl.classList.remove('hidden');
+function onReaderBack() {
+  // 阅读视图返回：目录书回到目录，单文件书回到书架
+  if (currentBook && currentBook.toc) showView(tocViewEl);
+  else showView(bookshelfEl);
 }
 
 function measureAndPaginate() {
@@ -149,7 +206,8 @@ function toggleTheme() {
 }
 
 // —— 事件 ——
-btnBack.addEventListener('click', backToShelf);
+btnBack.addEventListener('click', onReaderBack);
+btnTocBack.addEventListener('click', backToShelf);
 btnNext.addEventListener('click', nextPage);
 btnPrev.addEventListener('click', prevPage);
 btnFontPlus.addEventListener('click', () => changeFont(2));
@@ -159,7 +217,7 @@ document.addEventListener('keydown', (e) => {
   if (readerEl.classList.contains('hidden')) return;
   if (e.key === 'ArrowRight') nextPage();
   else if (e.key === 'ArrowLeft') prevPage();
-  else if (e.key === 'Escape') backToShelf();
+  else if (e.key === 'Escape') onReaderBack();
 });
 window.addEventListener('resize', () => {
   if (!readerEl.classList.contains('hidden')) {
